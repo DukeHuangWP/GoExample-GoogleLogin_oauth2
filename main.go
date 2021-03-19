@@ -23,18 +23,18 @@ type GoogleAcc struct {
 }
 
 func main() {
-	
+	//https://console.cloud.google.com/apis/credentials
 	googleOauthConfig = &oauth2.Config{
 		RedirectURL:  hostURL + "/callback",
-		ClientID:     "XXXX.apps.googleusercontent.com", //https://console.cloud.google.com/apis/credentials
-		ClientSecret: "_XXX", //https://console.cloud.google.com/apis/credentials
+		ClientID:     "XXXXX.apps.googleusercontent.com", //set from google credentials
+		ClientSecret: "XXXXX", //set from google credentials
 		Scopes:       []string{"https://www.googleapis.com/auth/userinfo.email"},
 		Endpoint:     google.Endpoint,
 	}
 
 	http.HandleFunc("/", handleGoogleLogin)            //front-web
 	http.HandleFunc("/action", handleAction)           //login and route
-	http.HandleFunc("/callback", handleGoogleCallback) //callback from google oauth2 //https://console.cloud.google.com/apis/credentials
+	http.HandleFunc("/callback", handleGoogleCallback) //callback from google oauth2
 	fmt.Println(http.ListenAndServe(":"+hostPort, nil))
 }
 
@@ -53,16 +53,17 @@ func handleGoogleLogin(w http.ResponseWriter, r *http.Request) {
 
 func handleAction(w http.ResponseWriter, r *http.Request) {
 	url := googleOauthConfig.AuthCodeURL(r.FormValue("state")) //URI Query : state
-	http.Redirect(w, r, url, http.StatusTemporaryRedirect) //that client get Token and oauth2 from google
+	http.Redirect(w, r, url, http.StatusTemporaryRedirect)     //that client get Token and oauth2 from google
 }
 
 func handleGoogleCallback(w http.ResponseWriter, r *http.Request) {
 
 	//http://localhost:8080/start?state=test&code=4%2F0AY0e-g42CDKUTrW7IG_0k4nI6tCxjILz776Z9zizcAcU4x0BTf1RfmbZWfTrbV0D3_UILQ&scope=email+openid+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fuserinfo.email&authuser=0&prompt=none
-
 	token, err := googleOauthConfig.Exchange(oauth2.NoContext, r.FormValue("code"))
 	if err != nil {
-		fmt.Fprintf(w, "code exchange failed: %s", err.Error())
+		//fmt.Fprintf(w, "code exchange failed: %s", err.Error())
+		state := r.FormValue("state")
+		http.Redirect(w, r, "/action?state="+state, http.StatusTemporaryRedirect) //force login again
 		return
 	}
 
@@ -88,7 +89,7 @@ func handleGoogleCallback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	handler.Direct(&account, w, r) 
+	handler.Direct(&account, w, r)
 	return
 }
 
@@ -114,7 +115,7 @@ func NewAction(actionType string) (Handlers, error) {
 type HandlerTest struct{}
 
 func (_ *HandlerTest) Direct(account *GoogleAcc, w http.ResponseWriter, r *http.Request) {
-	fmt.Printf("Client was login : %v\n",account.Email)
+	fmt.Printf("Client was login : %v\n", account.Email)
 	fmt.Fprintf(w, "Is working.\n")
 	return
 }
